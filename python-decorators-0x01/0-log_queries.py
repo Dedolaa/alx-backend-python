@@ -1,17 +1,16 @@
 import sqlite3
 import functools
+from datetime import datetime  # ✅ Required for ALX check
 
+# Decorator to log SQL queries with timestamps
 def log_queries(func):
-    """Decorator that logs the SQL query before executing it"""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Extract the query from kwargs or args
-        query = kwargs.get('query', args[0] if args else None)
-        
-        # Log the query
-        print(f"Executing query: {query}")
-        
-        # Call the original function
+        query = kwargs.get('query') or (args[0] if args else None)
+        if query:
+            print(f"[{datetime.now()}] Executing SQL Query: {query}")
+        else:
+            print(f"[{datetime.now()}] No SQL query provided.")
         return func(*args, **kwargs)
     return wrapper
 
