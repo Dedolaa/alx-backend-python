@@ -1,5 +1,5 @@
-
 #!/usr/bin/env python3
+
 """
 Unit and integration tests for client module
 """
