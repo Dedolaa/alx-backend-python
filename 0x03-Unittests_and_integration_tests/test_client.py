@@ -82,8 +82,8 @@ class TestGithubOrgClient(unittest.TestCase):
 """
 Integration test for GithubOrgClient.public_repos
 """
-# Test data for parameterized class
-TEST_DATA = [{
+# Define test fixtures directly in the file
+TEST_FIXTURES = [{
     'org_payload': {
         "repos_url": "https://api.github.com/orgs/testorg/repos",
         "name": "testorg"
@@ -96,13 +96,13 @@ TEST_DATA = [{
     'apache2_repos': ["repo2"]
 }]
 
-@parameterized_class(('org_payload', 'repos_payload', 'expected_repos', 'apache2_repos'), TEST_DATA)
+@parameterized_class(('org_payload', 'repos_payload', 'expected_repos', 'apache2_repos'), TEST_FIXTURES)
 class TestIntegrationGithubOrgClient(unittest.TestCase):
-    """Integration test class for GithubOrgClient"""
+    """Integration test class with parameterized fixtures"""
 
     @classmethod
     def setUpClass(cls):
-        """Set up class with mock patcher"""
+        """Mock requests.get to return our fixtures"""
         cls.get_patcher = patch('requests.get')
         cls.mock_get = cls.get_patcher.start()
 
@@ -122,7 +122,7 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         cls.get_patcher.stop()
 
     def test_public_repos(self):
-        """Test public_repos method with integration"""
+        """Test public_repos returns expected repositories"""
         client = GithubOrgClient("testorg")
         self.assertEqual(client.public_repos(), self.expected_repos)
 
@@ -133,3 +133,6 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
             client.public_repos(license="apache-2.0"),
             self.apache2_repos
         )
+
+if __name__ == '__main__':
+    unittest.main()
