@@ -50,7 +50,15 @@ class TestGetJson(unittest.TestCase):
             mock_get.assert_called_once_with(test_url)
             self.assertEqual(result, test_payload)
 
-from utils import memoize
+#!/usr/bin/env python3
+"""
+Unit tests for utils module
+"""
+
+import unittest
+from unittest.mock import patch
+from parameterized import parameterized
+from utils import access_nested_map, get_json, memoize
 
 
 class TestMemoize(unittest.TestCase):
@@ -70,13 +78,9 @@ class TestMemoize(unittest.TestCase):
         with patch.object(TestClass, 'a_method', return_value=42) as mock_method:
             instance = TestClass()
 
-            # Call the memoized property twice
             result1 = instance.a_property
             result2 = instance.a_property
 
-            # Check results
             self.assertEqual(result1, 42)
             self.assertEqual(result2, 42)
-
-            # Ensure the underlying method was called only once
             mock_method.assert_called_once()

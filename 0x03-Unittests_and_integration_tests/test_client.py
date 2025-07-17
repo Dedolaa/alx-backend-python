@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
+"""Unit tests for GithubOrgClient"""
 
-from parameterized import parameterized, parameterized_class
-from fixtures import org_payload, repos_payload, expected_repos, apache2_repos
-import requests
-
-"""
-Unit test for GithubOrgClient class
-"""
 import unittest
-from unittest.mock import patch, Mock, PropertyMock
+from unittest.mock import patch
 from parameterized import parameterized
 from client import GithubOrgClient
 
 
 class TestGithubOrgClient(unittest.TestCase):
-    """Tests for GithubOrgClient"""
+    """Test cases for GithubOrgClient"""
 
     @parameterized.expand([
         ("google",),
@@ -22,63 +16,71 @@ class TestGithubOrgClient(unittest.TestCase):
     ])
     @patch('client.get_json')
     def test_org(self, org_name, mock_get_json):
-        """Test that GithubOrgClient.org returns correct value"""
-        expected = {"login": org_name}
-        mock_get_json.return_value = expected
+        """Test GithubOrgClient.org returns the expected org data"""
+        expected_payload = {"login": org_name}
+        mock_get_json.return_value = expected_payload
 
         client = GithubOrgClient(org_name)
         result = client.org
 
-        mock_get_json.assert_called_once_with(f"https://api.github.com/orgs/{org_name}")
-        self.assertEqual(result, expected)
+        mock_get_json.assert_called_once_with(
+            f"https://api.github.com/orgs/{org_name}"
+        )
+        self.assertEqual(result, expected_payload)
 
-from unittest.mock import PropertyMock
-
-
-class TestGithubOrgClient(unittest.TestCase):
-    ...
-    
     def test_public_repos_url(self):
-        """Test that _public_repos_url returns expected value from org"""
-        test_payload = {"repos_url": "https://api.github.com/orgs/test/repos"}
+        """Test _public_repos_url returns expected repos_url from org"""
+        expected_url = "https://api.github.com/orgs/testorg/repos"
+        test_payload = {"repos_url": expected_url}
 
-        with patch('client.GithubOrgClient.org', new_callable=PropertyMock) as mock_org:
+        with patch.object(GithubOrgClient, 'org', new_callable=property) as mock_org:
             mock_org.return_value = test_payload
-            client = GithubOrgClient("test")
+
+            client = GithubOrgClient("testorg")
             result = client._public_repos_url
-            self.assertEqual(result, test_payload["repos_url"])
+
+            self.assertEqual(result, expected_url)
 
     @patch('client.get_json')
     def test_public_repos(self, mock_get_json):
-        """Test that public_repos returns list of repo names"""
-        test_url = "https://api.github.com/orgs/test/repos"
-        test_payload = [
+        """Test public_repos returns expected list of repo names"""
+        mock_payload = [
             {"name": "repo1"},
             {"name": "repo2"},
             {"name": "repo3"},
         ]
-        mock_get_json.return_value = test_payload
+        mock_get_json.return_value = mock_payload
+        expected_repos = ["repo1", "repo2", "repo3"]
 
-        with patch('client.GithubOrgClient._public_repos_url', new_callable=PropertyMock) as mock_url:
-            mock_url.return_value = test_url
-            client = GithubOrgClient("test")
+        with patch.object(GithubOrgClient, "_public_repos_url", new_callable=property) as mock_url:
+            mock_url.return_value = "https://fake.url/repos"
+
+            client = GithubOrgClient("testorg")
             result = client.public_repos()
 
-            # Assertions
-            self.assertEqual(result, ["repo1", "repo2", "repo3"])
+            self.assertEqual(result, expected_repos)
             mock_url.assert_called_once()
-            mock_get_json.assert_called_once_with(test_url)
+            mock_get_json.assert_called_once_with("https://fake.url/repos")
 
-from parameterized import parameterized
+from parameterized import parameterized  # Already imported above
+
 
 @parameterized.expand([
         ({"license": {"key": "my_license"}}, "my_license", True),
         ({"license": {"key": "other_license"}}, "my_license", False),
     ])
 def test_has_license(self, repo, license_key, expected):
-        """Test that has_license returns the correct boolean"""
+        """Test that has_license returns correct boolean"""
         result = GithubOrgClient.has_license(repo, license_key)
         self.assertEqual(result, expected)
+
+
+from unittest.mock import MagicMock
+from parameterized import parameterized_class
+from fixtures import org_payload, repos_payload, expected_repos, apache2_repos
+import requests
+import json
+
 
 @parameterized_class([
     {
@@ -93,17 +95,29 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Set up mock for requests.get"""
+        """Patch requests.get to return mocked responses based on URL"""
         cls.get_patcher = patch('requests.get')
-        mock_get = cls.get_patcher.start()
+        cls.mock_get = cls.get_patcher.start()
 
-        # Setup .json() return values depending on the URL
-        mock_get.side_effect = [
-            Mock(**{"json.return_value": cls.org_payload}),
-            Mock(**{"json.return_value": cls.repos_payload}),
-        ]
+        # Create mock response objects
+        cls.mock_get.side_effect = lambda url: MagicMock(
+            json=MagicMock(return_value=cls.org_payload if "orgs" in url else cls.repos_payload)
+        )
 
     @classmethod
     def tearDownClass(cls):
-        """Stop patching requests.get"""
+        """Stop patcher after all tests"""
         cls.get_patcher.stop()
+
+    def test_public_repos(self):
+        """Test that public_repos returns expected list of repos"""
+        client = GithubOrgClient("testorg")
+        self.assertEqual(client.public_repos(), self.expected_repos)
+
+    def test_public_repos_with_license(self):
+        """Test that public_repos with license filter works correctly"""
+        client = GithubOrgClient("testorg")
+        self.assertEqual(
+            client.public_repos(license="apache-2.0"),
+            self.apache2_repos
+        )
