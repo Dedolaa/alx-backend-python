@@ -79,27 +79,25 @@ class TestGithubOrgClient(unittest.TestCase):
         result = client.has_license(repo, license_key)
         self.assertEqual(result, expected)
 
-
-# Integration test class
+"""
+Integration test for GithubOrgClient.public_repos
+"""
+@parameterized_class([
+    {
+        'org_payload': {"repos_url": "https://api.github.com/orgs/testorg/repos"},
+        'repos_payload': [{"name": "repo1"}, {"name": "repo2"}],
+        'expected_repos': ["repo1", "repo2"],
+        'apache2_repos': ["repo2"]
+    }
+])
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Integration test class for GithubOrgClient"""
 
     @classmethod
     def setUpClass(cls):
         """Set up class with mock patcher"""
-        cls.get_patcher = patch('client.requests.get')
+        cls.get_patcher = patch('requests.get')
         cls.mock_get = cls.get_patcher.start()
-
-        # Define test payloads
-        cls.org_payload = {
-            "repos_url": "https://api.github.com/orgs/testorg/repos"
-        }
-        cls.repos_payload = [
-            {"name": "repo1", "license": {"key": "mit"}},
-            {"name": "repo2", "license": {"key": "apache-2.0"}},
-        ]
-        cls.expected_repos = ["repo1", "repo2"]
-        cls.apache2_repos = ["repo2"]
 
         def side_effect(url, *args, **kwargs):
             mock_response = Mock()
