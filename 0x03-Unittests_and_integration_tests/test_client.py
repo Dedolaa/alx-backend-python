@@ -193,8 +193,8 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         client = GithubOrgClient("testorg")
         result = client.public_repos()
         self.assertEqual(result, self.expected_repos)
-        
-        # Verify mock was called correctly
+
+        #  Verify mock was called correctly
         self.mock_get.assert_any_call("https://api.github.com/orgs/testorg")
         self.mock_get.assert_any_call(self.org_payload["repos_url"])
 
@@ -203,8 +203,8 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         client = GithubOrgClient("testorg")
         result = client.public_repos(license="apache-2.0")
         self.assertEqual(result, self.apache2_repos)
-        
-        # Verify mock was called correctly
+
+        #  Verify mock was called correctly
         self.mock_get.assert_any_call("https://api.github.com/orgs/testorg")
         self.mock_get.assert_any_call(self.org_payload["repos_url"])
 
