@@ -4,7 +4,7 @@ Unit and integration tests for client module
 """
 import unittest
 from parameterized import parameterized, parameterized_class
-from unittest.mock import patch, Mock, PropertyMock
+from unittest.mock import patch, Mock
 from client import GithubOrgClient
 
 
@@ -36,7 +36,7 @@ class TestGithubOrgClient(unittest.TestCase):
 
         with patch(
             'client.GithubOrgClient.org',
-            new_callable=PropertyMock,
+            new_callable=PropertyMock, # type: ignore
             return_value=test_payload
         ) as mock_org:
             client = GithubOrgClient("testorg")
@@ -57,7 +57,7 @@ class TestGithubOrgClient(unittest.TestCase):
 
         with patch(
             'client.GithubOrgClient._public_repos_url',
-            new_callable=PropertyMock,
+            new_callable=PropertyMock, # type: ignore
             return_value=test_repos_url
         ) as mock_public_repos_url:
             mock_get_json.return_value = test_repos_payload
