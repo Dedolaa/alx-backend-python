@@ -222,7 +222,7 @@ Integration tests for client.GithubOrgClient class
 """
 import unittest
 from parameterized import parameterized_class
-from unittest.mock import patch, PropertyMock, Mock
+from unittest.mock import patch, Mock
 from client import GithubOrgClient
 from fixtures import TEST_PAYLOAD
 
@@ -241,7 +241,7 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up class with mock patcher"""
-        cls.get_patcher = patch('requests.get')
+        cls.get_patcher = patch('requests.get')  # Must be named exactly 'get_patcher'
         cls.mock_get = cls.get_patcher.start()
 
         def side_effect(url, *args, **kwargs):
@@ -258,7 +258,7 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Stop the patcher"""
-        cls.get_patcher.stop()
+        cls.get_patcher.stop()  # Must call stop() on the patcher
 
     def test_public_repos(self):
         """Test public_repos method with integration"""
