@@ -7,21 +7,12 @@ org_payload = {
 }
 
 repos_payload = [
-    {
-        "id": 1,
-        "name": "repo1",
-        "license": {"key": "apache-2.0"}
-    },
-    {
-        "id": 2,
-        "name": "repo2",
-        "license": {"key": "mit"}
-    }
+    {"name": "repo1", "license": {"key": "mit"}},
+    {"name": "repo2", "license": {"key": "apache-2.0"}},
 ]
-
 expected_repos = ["repo1", "repo2"]
+apache2_repos = ["repo2"]
 
-apache2_repos = ["repo1"]
 
 TEST_PAYLOAD = [
   (
