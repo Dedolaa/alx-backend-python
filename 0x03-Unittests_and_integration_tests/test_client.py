@@ -82,14 +82,21 @@ class TestGithubOrgClient(unittest.TestCase):
 """
 Integration test for GithubOrgClient.public_repos
 """
-@parameterized_class([
-    {
-        'org_payload': {"repos_url": "https://api.github.com/orgs/testorg/repos"},
-        'repos_payload': [{"name": "repo1"}, {"name": "repo2"}],
-        'expected_repos': ["repo1", "repo2"],
-        'apache2_repos': ["repo2"]
-    }
-])
+# Test data for parameterized class
+TEST_DATA = [{
+    'org_payload': {
+        "repos_url": "https://api.github.com/orgs/testorg/repos",
+        "name": "testorg"
+    },
+    'repos_payload': [
+        {"name": "repo1", "license": {"key": "mit"}},
+        {"name": "repo2", "license": {"key": "apache-2.0"}}
+    ],
+    'expected_repos': ["repo1", "repo2"],
+    'apache2_repos': ["repo2"]
+}]
+
+@parameterized_class(('org_payload', 'repos_payload', 'expected_repos', 'apache2_repos'), TEST_DATA)
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Integration test class for GithubOrgClient"""
 
