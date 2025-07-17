@@ -38,7 +38,7 @@ class TestGithubOrgClient(unittest.TestCase):
 
         with patch(
             'client.GithubOrgClient.org',
-            new_callable=PropertyMock, # type: ignore
+            new_callable=PropertyMock,   # type: ignore
             return_value=test_payload
         ) as mock_org:
             client = GithubOrgClient("testorg")
@@ -59,7 +59,7 @@ class TestGithubOrgClient(unittest.TestCase):
 
         with patch(
             'client.GithubOrgClient._public_repos_url',
-            new_callable=PropertyMock, # type: ignore
+            new_callable=PropertyMock,   # type: ignore
             return_value=test_repos_url
         ) as mock_public_repos_url:
             mock_get_json.return_value = test_repos_payload
@@ -98,6 +98,7 @@ TEST_FIXTURES = [{
     'expected_repos': ["repo1", "repo2"],
     'apache2_repos': ["repo2"]
 }]
+
 
 @parameterized_class([
     {
@@ -149,6 +150,7 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
             client.public_repos(license="apache-2.0"),
             self.apache2_repos
         )
+
 
 @parameterized_class([
     {
