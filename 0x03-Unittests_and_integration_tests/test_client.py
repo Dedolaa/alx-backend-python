@@ -148,3 +148,66 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
             client.public_repos(license="apache-2.0"),
             self.apache2_repos
         )
+
+@parameterized_class([
+    {
+        'org_payload': {
+            "repos_url": "https://api.github.com/orgs/testorg/repos",
+            "name": "testorg"
+        },
+        'repos_payload': [
+            {"name": "repo1", "license": {"key": "mit"}},
+            {"name": "repo2", "license": {"key": "apache-2.0"}},
+            {"name": "repo3", "license": {"key": "gpl"}}
+        ],
+        'expected_repos': ["repo1", "repo2", "repo3"],
+        'apache2_repos': ["repo2"]
+    }
+])
+class TestIntegrationGithubOrgClient(unittest.TestCase):
+    """Integration test class for GithubOrgClient.public_repos"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up mock for requests.get"""
+        cls.get_patcher = patch('requests.get')
+        cls.mock_get = cls.get_patcher.start()
+
+        def side_effect(url, *args, **kwargs):
+            mock_response = Mock()
+            if "orgs/testorg" in url:
+                mock_response.json.return_value = cls.org_payload
+            elif "repos" in url:
+                mock_response.json.return_value = cls.repos_payload
+            return mock_response
+
+        cls.mock_get.side_effect = side_effect
+
+    @classmethod
+    def tearDownClass(cls):
+        """Stop the patcher"""
+        cls.get_patcher.stop()
+
+    def test_public_repos(self):
+        """Test public_repos without license filter"""
+        client = GithubOrgClient("testorg")
+        result = client.public_repos()
+        self.assertEqual(result, self.expected_repos)
+        
+        # Verify mock was called correctly
+        self.mock_get.assert_any_call("https://api.github.com/orgs/testorg")
+        self.mock_get.assert_any_call(self.org_payload["repos_url"])
+
+    def test_public_repos_with_license(self):
+        """Test public_repos with Apache 2.0 license filter"""
+        client = GithubOrgClient("testorg")
+        result = client.public_repos(license="apache-2.0")
+        self.assertEqual(result, self.apache2_repos)
+        
+        # Verify mock was called correctly
+        self.mock_get.assert_any_call("https://api.github.com/orgs/testorg")
+        self.mock_get.assert_any_call(self.org_payload["repos_url"])
+
+
+if __name__ == '__main__':
+    unittest.main()
