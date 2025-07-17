@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Unit tests for client module
+Unit and integration tests for client module
 """
 import unittest
-from parameterized import parameterized
+from parameterized import parameterized, parameterized_class
 from unittest.mock import patch, Mock, PropertyMock
 from client import GithubOrgClient
 
@@ -80,25 +80,28 @@ class TestGithubOrgClient(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-@parameterized_class([ # type: ignore
-    {
-        "org_payload": {"repos_url": "https://api.github.com/orgs/testorg/repos"},
-        "repos_payload": [{"name": "repo1"}, {"name": "repo2"}],
-        "expected_repos": ["repo1", "repo2"],
-        "apache2_repos": ["repo2"],
-    }
-])
+# Integration test class
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Integration test class for GithubOrgClient"""
 
     @classmethod
     def setUpClass(cls):
         """Set up class with mock patcher"""
-        cls.get_patcher = patch('requests.get')
+        cls.get_patcher = patch('client.requests.get')
         cls.mock_get = cls.get_patcher.start()
 
+        # Define test payloads
+        cls.org_payload = {
+            "repos_url": "https://api.github.com/orgs/testorg/repos"
+        }
+        cls.repos_payload = [
+            {"name": "repo1", "license": {"key": "mit"}},
+            {"name": "repo2", "license": {"key": "apache-2.0"}},
+        ]
+        cls.expected_repos = ["repo1", "repo2"]
+        cls.apache2_repos = ["repo2"]
+
         def side_effect(url, *args, **kwargs):
-            """Side effect function to return different payloads"""
             mock_response = Mock()
             if "orgs/testorg" in url:
                 mock_response.json.return_value = cls.org_payload
