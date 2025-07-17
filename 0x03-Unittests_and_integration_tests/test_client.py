@@ -80,7 +80,7 @@ class TestGithubOrgClient(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-@parameterized_class([
+@parameterized_class([ # type: ignore
     {
         "org_payload": {"repos_url": "https://api.github.com/orgs/testorg/repos"},
         "repos_payload": [{"name": "repo1"}, {"name": "repo2"}],
