@@ -35,4 +35,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         # Example validation to satisfy the check
         if not data:
             raise serializers.ValidationError("Conversation data cannot be empty.")
+<<<<<<< HEAD
         return data
+=======
+        return data
+>>>>>>> cc12cea (new changes)
