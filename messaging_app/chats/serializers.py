@@ -1,14 +1,19 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Conversation, Message
 from django.core.exceptions import ValidationError
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+        
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender.username', read_only=True)
 
     class Meta:
         model = Message
         fields = ['id', 'sender', 'content', 'timestamp']
-
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = serializers.SlugRelatedField(
