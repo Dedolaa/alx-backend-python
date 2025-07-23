@@ -116,6 +116,11 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Not allowed."}, status=HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
+    class MessageViewSet(viewsets.ModelViewSet):
+    ...
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MessageFilter
+
     def get_queryset(self):
         return self.queryset.filter(
             conversation__participants=self.request.user
