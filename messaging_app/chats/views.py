@@ -13,6 +13,8 @@ from .filters import MessageFilter
 from .pagination import MessagePagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
+from rest_framework.status import HTTP_403_FORBIDDEN
+from rest_framework.exceptions import PermissionDenied
 
 # --------------------------
 # Conversation ViewSet
@@ -95,6 +97,24 @@ class MessageViewSet(viewsets.ModelViewSet):
     filterset_class = MessageFilter
     ordering_fields = ['created_at']
     ordering = ['-created_at']
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Message.objects.filter(sender=user)  # 👈 this line is REQUIRED
+
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.sender != request.user:
+            return Response({"detail": "Not allowed."}, status=HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
         return self.queryset.filter(
