@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -27,3 +28,15 @@ class IsParticipantOfConversation(permissions.BasePermission):
         if conversation and request.user in conversation.participants.all():
             return True
         return False
+
+class IsOwnerOrReadOnly(BasePermission):
+    """
+    Custom permission to only allow owners of a message or conversation to edit or delete it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Allow read-only permissions for any request
+        if request.method in SAFE_METHODS:
+            return True
+
+        # Check if the user owns the object for PUT, PATCH, DELETE
+        return obj.sender == request.user or obj.user == request.user
