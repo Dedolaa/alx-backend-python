@@ -24,55 +24,49 @@ class RestrictAccessByTimeMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        now = datetime.now().time()
-        start = time(18, 0)  # 6:00 PM
-        end = time(21, 0)    # 9:00 PM
-
-        # If current time is outside 6 PM - 9 PM, deny access
-        if not (start <= now <= end):
-            return HttpResponseForbidden("Access to chat is only allowed between 6 PM and 9 PM.")
-
+        current_hour = datetime.now().hour
+        # Only allow access between 6 PM and 9 PM
+        if current_hour < 18 or current_hour >= 21:
+            return HttpResponseForbidden("Access to chats is restricted during this time.")
         return self.get_response(request)
 
 class OffensiveLanguageMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        self.ip_records = {}
+        self.message_log = {}
 
     def __call__(self, request):
-        # Only limit POST requests to messaging endpoints
-        if request.method == 'POST' and '/messages' in request.path:
+        # Only monitor POST requests (i.e., message sending)
+        if request.method == "POST":
             ip = self.get_client_ip(request)
             now = datetime.now()
 
-            # Initialize if IP not tracked
-            if ip not in self.ip_records:
-                self.ip_records[ip] = []
+            # Initialize if IP not already tracked
+            if ip not in self.message_log:
+                self.message_log[ip] = []
 
-            # Remove old timestamps >1 minute ago
-            one_min_ago = now - timedelta(minutes=1)
-            self.ip_records[ip] = [
-                ts for ts in self.ip_records[ip] if ts > one_min_ago
+            # Filter messages in the last 60 seconds
+            recent_msgs = [
+                timestamp for timestamp in self.message_log[ip]
+                if now - timestamp < timedelta(minutes=1)
             ]
 
-            # Check if current count exceeds limit
-            if len(self.ip_records[ip]) >= 5:
-               return HttpResponse(
-                  "You have exceeded the 5-message-per-minute limit. Please wait.",
-                   status=429
-)
+            # Update log
+            recent_msgs.append(now)
+            self.message_log[ip] = recent_msgs
 
-            # Record new timestamp
-            self.ip_records[ip].append(now)
+            if len(recent_msgs) > 5:
+                return HttpResponseForbidden("Rate limit exceeded: Max 5 messages per minute.")
 
         return self.get_response(request)
 
     def get_client_ip(self, request):
-        # Handle proxies (if any)
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
-            return x_forwarded_for.split(',')[0].strip()
-        return request.META.get('REMOTE_ADDR')
+            ip = x_forwarded_for.split(",")[0]
+        else:
+            ip = request.META.get("REMOTE_ADDR")
+        return ip
 
 class RolePermissionMiddleware:
     def __init__(self, get_response):
