@@ -42,3 +42,19 @@ def message_thread_view(request, message_id):
     }
     return render(request, 'messaging/thread.html', context)
     
+@login_required
+def send_message(request):
+    if request.method == 'POST':
+        receiver_id = request.POST.get('receiver')
+        content = request.POST.get('content')
+        parent_id = request.POST.get('parent_id')  
+
+        receiver = get_object_or_404(User, id=receiver_id)
+        parent_message = Message.objects.filter(id=parent_id).first() if parent_id else None
+
+        Message.objects.create(
+            sender=request.user,  
+            receiver=receiver,    
+            content=content,
+            parent_message=parent_message
+        )
