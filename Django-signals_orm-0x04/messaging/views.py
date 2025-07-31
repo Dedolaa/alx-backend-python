@@ -58,3 +58,9 @@ def send_message(request):
             content=content,
             parent_message=parent_message
         )
+
+@login_required
+def unread_messages_view(request):
+    unread_msgs = Message.unread.unread_for_user(request.user)
+    context = {'unread_messages': unread_msgs}
+    return render(request, 'messaging/unread_messages.html', context)
