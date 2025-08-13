@@ -1,0 +1,21 @@
+# kubctl-0x01.ps1 - Scale Django app in Kubernetes and monitor resources
+
+# Set deployment name and desired replicas
+$deploymentName = "messaging-app-deployment"
+$namespace = "default"
+$replicas = 3
+
+Write-Host "Scaling deployment '$deploymentName' to $replicas replicas..."
+kubectl scale deployment $deploymentName --replicas=$replicas -n $namespace
+
+Write-Host "Verifying pods..."
+kubectl get pods -n $namespace
+
+# Resource monitoring (CPU/Memory usage)
+Write-Host "Monitoring resource usage (CPU/Memory)..."
+kubectl top pods -n $namespace
+
+Write-Host "`n💡 Load testing suggestion:"
+Write-Host "Install wrk (https://github.com/wg/wrk) and run:"
+Write-Host "wrk -t2 -c50 -d30s http://<service-ip>:8000/"
+Write-Host "Replace <service-ip> with the ClusterIP of your Django service (kubectl get svc)."

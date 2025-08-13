@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# kurbeScript.ps1 - Set up and verify a local Kubernetes cluster using Minikube
+
+Write-Host "Checking if Minikube is installed..."
+if (-not (Get-Command minikube -ErrorAction SilentlyContinue)) {
+    Write-Host "Minikube is not installed. Please install it from:"
+    Write-Host "https://minikube.sigs.k8s.io/docs/start/"
+    exit 1
+}
+Write-Host "Minikube is installed."
+
+Write-Host "Starting Minikube cluster..."
+minikube start
+
+Write-Host "Verifying cluster status..."
+kubectl cluster-info
+
+Write-Host "Listing available pods in all namespaces..."
+kubectl get pods --all-namespaces
+
+Write-Host "Kubernetes local cluster setup complete."

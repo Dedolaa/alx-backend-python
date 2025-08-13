@@ -1,0 +1,22 @@
+# kubctl-0x02.ps1 - Blue-Green Deployment automation
+
+# Deploy blue version
+Write-Host "Deploying blue version..."
+kubectl apply -f messaging_app/blue_deployment.yaml
+
+# Deploy green version
+Write-Host "Deploying green version..."
+kubectl apply -f messaging_app/green_deployment.yaml
+
+# Deploy service (initially pointing to blue)
+Write-Host "Applying service..."
+kubectl apply -f messaging_app/kubeservice.yaml
+
+# Verify pods
+Write-Host "Checking pods..."
+kubectl get pods
+
+# Check logs for green deployment
+Write-Host "Checking logs for green deployment..."
+$greenPod = kubectl get pods -l app=messaging-app,version=green -o jsonpath="{.items[0].metadata.name}"
+kubectl logs $greenPod
