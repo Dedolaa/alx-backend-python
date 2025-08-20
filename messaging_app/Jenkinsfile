@@ -1,142 +1,65 @@
-// messaging_app/Jenkinsfile
 pipeline {
-  agent any
-  options { timestamps() }
-  environment {
-    REPORT_DIR = 'reports'
-  }
-  stages {
-    stage('Checkout') {
-      steps {
-        // uses the SCM settings from the job
-        deleteDir()
-        checkout scm
-      }
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials') // Jenkins credential ID
+        DOCKER_IMAGE = "dedola/messaging_app"  
     }
 
-    stage('Set up Python & deps') {
-      steps {
-        dir('messaging_app') {
-          withPythonEnv('Python 3.11') {
-            sh '''
-              python --version
-              python -m pip install --upgrade pip
-              if [ -f requirements.txt ]; then
-                pip install -r requirements.txt
-              fi
-              # Ensure pytest + reporters exist
-              pip install pytest pytest-cov pytest-html
-            '''
-          }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Dedolaa/alx-backend-python.git'
+            }
         }
-      }
-    }
 
-    stage('Run tests') {
-      steps {
-        dir('messaging_app') {
-          sh 'mkdir -p $REPORT_DIR'
-          withPythonEnv('Python 3.11') {
-            sh '''
-              # Run pytest and produce JUnit XML + HTML report + coverage summary
-              pytest -q \
-                --junitxml=$REPORT_DIR/junit.xml \
-                --html=$REPORT_DIR/report.html --self-contained-html \
-                --cov=. --cov-report=term
-            '''
-          }
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    cd messaging_app
+                    python3 -m venv venv
+                    source venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
+            }
         }
-      }
-    }
-  }
 
-  post {
-    always {
-      // Publish results even if tests fail
-      dir('messaging_app') {
-        junit testResults: "${REPORT_DIR}/junit.xml", allowEmptyResults: true
-        archiveArtifacts artifacts: "${REPORT_DIR}/**", fingerprint: true, allowEmptyArchive: true
-      }
-    }
-  }
-}
-
-pipeline {
-  agent any
-  environment {
-    REPORT_DIR = 'reports'
-    DOCKER_IMAGE = "dedola/messaging_app:latest"
-  }
-  stages {
-    stage('Checkout') {
-      steps {
-        deleteDir()
-        checkout scm
-      }
-    }
-
-    stage('Set up Python & deps') {
-      steps {
-        dir('messaging_app') {
-          withPythonEnv('Python 3.11') {
-            sh '''
-              python -m pip install --upgrade pip
-              if [ -f requirements.txt ]; then
-                pip install -r requirements.txt
-              fi
-              pip install pytest pytest-cov pytest-html
-            '''
-          }
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    cd messaging_app
+                    source venv/bin/activate
+                    pytest --junitxml=pytest-report.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'messaging_app/pytest-report.xml'
+                }
+            }
         }
-      }
-    }
 
-    stage('Run tests') {
-      steps {
-        dir('messaging_app') {
-          sh 'mkdir -p $REPORT_DIR'
-          withPythonEnv('Python 3.11') {
-            sh '''
-              pytest -q \
-                --junitxml=$REPORT_DIR/junit.xml \
-                --html=$REPORT_DIR/report.html --self-contained-html \
-                --cov=. --cov-report=term
-            '''
-          }
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    cd messaging_app
+                    docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .
+                '''
+            }
         }
-      }
-    }
 
-    // 🔹 New Stage: Build Docker Image
-    stage('Build Docker Image') {
-      steps {
-        script {
-          dir('messaging_app') {
-            sh "docker build -t ${DOCKER_IMAGE} ."
-          }
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    sh '''
+                        docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest
+                        docker push $DOCKER_IMAGE:$BUILD_NUMBER
+                        docker push $DOCKER_IMAGE:latest
+                    '''
+                }
+            }
         }
-      }
     }
-
-    // 🔹 New Stage: Push to Docker Hub
-    stage('Push Docker Image') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push ${DOCKER_IMAGE}
-          '''
-        }
-      }
-    }
-  }
-
-  post {
-    always {
-      dir('messaging_app') {
-        junit testResults: "${REPORT_DIR}/junit.xml", allowEmptyResults: true
-        archiveArtifacts artifacts: "${REPORT_DIR}/**", fingerprint: true, allowEmptyArchive: true
-      }
-    }
-  }
 }
