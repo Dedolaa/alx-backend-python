@@ -1,0 +1,142 @@
+// messaging_app/Jenkinsfile
+pipeline {
+  agent any
+  options { timestamps() }
+  environment {
+    REPORT_DIR = 'reports'
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        // uses the SCM settings from the job
+        deleteDir()
+        checkout scm
+      }
+    }
+
+    stage('Set up Python & deps') {
+      steps {
+        dir('messaging_app') {
+          withPythonEnv('Python 3.11') {
+            sh '''
+              python --version
+              python -m pip install --upgrade pip
+              if [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+              fi
+              # Ensure pytest + reporters exist
+              pip install pytest pytest-cov pytest-html
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Run tests') {
+      steps {
+        dir('messaging_app') {
+          sh 'mkdir -p $REPORT_DIR'
+          withPythonEnv('Python 3.11') {
+            sh '''
+              # Run pytest and produce JUnit XML + HTML report + coverage summary
+              pytest -q \
+                --junitxml=$REPORT_DIR/junit.xml \
+                --html=$REPORT_DIR/report.html --self-contained-html \
+                --cov=. --cov-report=term
+            '''
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // Publish results even if tests fail
+      dir('messaging_app') {
+        junit testResults: "${REPORT_DIR}/junit.xml", allowEmptyResults: true
+        archiveArtifacts artifacts: "${REPORT_DIR}/**", fingerprint: true, allowEmptyArchive: true
+      }
+    }
+  }
+}
+
+pipeline {
+  agent any
+  environment {
+    REPORT_DIR = 'reports'
+    DOCKER_IMAGE = "dedola/messaging_app:latest"
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        deleteDir()
+        checkout scm
+      }
+    }
+
+    stage('Set up Python & deps') {
+      steps {
+        dir('messaging_app') {
+          withPythonEnv('Python 3.11') {
+            sh '''
+              python -m pip install --upgrade pip
+              if [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+              fi
+              pip install pytest pytest-cov pytest-html
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Run tests') {
+      steps {
+        dir('messaging_app') {
+          sh 'mkdir -p $REPORT_DIR'
+          withPythonEnv('Python 3.11') {
+            sh '''
+              pytest -q \
+                --junitxml=$REPORT_DIR/junit.xml \
+                --html=$REPORT_DIR/report.html --self-contained-html \
+                --cov=. --cov-report=term
+            '''
+          }
+        }
+      }
+    }
+
+    // 🔹 New Stage: Build Docker Image
+    stage('Build Docker Image') {
+      steps {
+        script {
+          dir('messaging_app') {
+            sh "docker build -t ${DOCKER_IMAGE} ."
+          }
+        }
+      }
+    }
+
+    // 🔹 New Stage: Push to Docker Hub
+    stage('Push Docker Image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push ${DOCKER_IMAGE}
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      dir('messaging_app') {
+        junit testResults: "${REPORT_DIR}/junit.xml", allowEmptyResults: true
+        archiveArtifacts artifacts: "${REPORT_DIR}/**", fingerprint: true, allowEmptyArchive: true
+      }
+    }
+  }
+}
