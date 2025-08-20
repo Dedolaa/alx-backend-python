@@ -63,3 +63,57 @@ pipeline {
         }
     }
 }
+
+pipeline {
+    agent {
+        docker {
+            image 'python:3.10'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Dedolaa/alx-backend-python.git', branch: 'main'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    cd messaging_app
+                    python -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    cd messaging_app
+                    . venv/bin/activate
+                    pytest --junitxml=report.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'messaging_app/report.xml'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t myapp:latest .'
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry([ credentialsId: 'DOCKERHUB_CREDENTIALS', url: '' ]) {
+                    sh 'docker tag myapp:latest mydockerhubusername/myapp:latest'
+                    sh 'docker push mydockerhubusername/myapp:latest'
+                }
+            }
+        }
+    }
+}
