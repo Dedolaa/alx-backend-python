@@ -34,6 +34,14 @@ jobs:
       run: |
         cd messaging_app
         pip install -r requirements.txt
+        pip install flake8 coverage
+
+    - name: Run flake8 linting
+      run: |
+        cd messaging_app
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: false
 
     - name: Run migrations
       run: |
@@ -43,10 +51,35 @@ jobs:
         DATABASE_URL: mysql://test_user:test_password@localhost:3306/test_db
         DJANGO_SETTINGS_MODULE: messaging.settings
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: |
         cd messaging_app
-        python manage.py test --noinput --verbosity=2
+        coverage run --source='.' manage.py test --noinput --verbosity=2
+        coverage report -m
+        coverage xml
       env:
         DATABASE_URL: mysql://test_user:test_password@localhost:3306/test_db
         DJANGO_SETTINGS_MODULE: messaging.settings
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: |
+          messaging_app/coverage.xml
+          messaging_app/htmlcov/
+        if-no-files-found: ignore
+
+    - name: Generate HTML coverage report
+      run: |
+        cd messaging_app
+        coverage html
+
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts
+        path: |
+          messaging_app/coverage.xml
+          messaging_app/htmlcov/
+        if-no-files-found: ignore
