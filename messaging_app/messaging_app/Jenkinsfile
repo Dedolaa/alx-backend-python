@@ -6,7 +6,7 @@ pipeline {
     }
     
     stages {
-        stage('Checkout') {
+        stage('Checkout from GitHub') {
             steps {
                 git(
                     url: 'https://github.com/Dedolaa/alx-backend-python.git',
@@ -16,42 +16,18 @@ pipeline {
             }
         }
         
-        stage('Setup Virtual Environment') {
-            steps {
-                dir('messaging_app') {
-                    sh 'python3 -m venv venv'
-                    sh '. venv/bin/activate && pip install --upgrade pip'
-                }
-            }
-        }
-        
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh '''
-                        . venv/bin/activate
-                        pip install pytest pytest-html
-                    '''
+                    sh 'pip3 install -r requirements.txt'
                 }
             }
         }
         
-        stage('Create Test Directory') {
+        stage('Run Tests with pytest') {
             steps {
                 dir('messaging_app') {
-                    sh 'mkdir -p test-results'
-                }
-            }
-        }
-        
-        stage('Run Tests') {
-            steps {
-                dir('messaging_app') {
-                    sh '''
-                        . venv/bin/activate
-                        # Run pytest with JUnit XML output (built into pytest)
-                        python -m pytest tests/ -v --junitxml=test-results/junit.xml || echo "Test execution completed with exit code $?"
-                    '''
+                    sh 'python3 -m pytest tests/ -v --junitxml=test-results/junit.xml'
                 }
             }
             post {
@@ -61,14 +37,10 @@ pipeline {
             }
         }
         
-        stage('Generate HTML Report') {
+        stage('Generate Test Report') {
             steps {
                 dir('messaging_app') {
-                    sh '''
-                        . venv/bin/activate
-                        # Generate HTML report
-                        python -m pytest tests/ -v --html=test-results/report.html --self-contained-html || echo "HTML report generation completed"
-                    '''
+                    sh 'python3 -m pytest tests/ -v --html=test-results/report.html --self-contained-html'
                 }
             }
             post {
@@ -88,7 +60,7 @@ pipeline {
     
     post {
         always {
-            echo 'Pipeline execution completed'
+            echo 'Pipeline completed successfully'
         }
     }
 }
