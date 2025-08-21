@@ -1,19 +1,13 @@
 pipeline {
     agent any
     
-    tools {
-        python "python3"
-    }
-    
     environment {
-        // Set Python path if needed
         PYTHONPATH = "${WORKSPACE}"
     }
     
     stages {
         stage('Checkout') {
             steps {
-                // Clone the repository with credentials
                 git(
                     url: 'https://github.com/Dedolaa/alx-backend-python.git',
                     credentialsId: 'github-credentials',
@@ -22,10 +16,20 @@ pipeline {
             }
         }
         
+        stage('Setup Python') {
+            steps {
+                sh '''
+                    python3 --version
+                    pip3 --version
+                    # Install Python if not available (using system Python)
+                '''
+            }
+        }
+        
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'pip install -r requirements.txt'
+                    sh 'pip3 install -r requirements.txt'
                 }
             }
         }
@@ -33,7 +37,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'python -m pytest tests/ -v --junitxml=test-results/junit.xml'
+                    sh 'python3 -m pytest tests/ -v --junitxml=test-results/junit.xml'
                 }
             }
             post {
@@ -41,42 +45,6 @@ pipeline {
                     junit 'messaging_app/test-results/junit.xml'
                 }
             }
-        }
-        
-        stage('Generate Test Report') {
-            steps {
-                dir('messaging_app') {
-                    // Generate HTML report if you have pytest-html
-                    sh 'python -m pytest tests/ -v --html=test-results/report.html --self-contained-html'
-                }
-            }
-            post {
-                always {
-                    publishHTML(target: [
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'messaging_app/test-results',
-                        reportFiles: 'report.html',
-                        reportName: 'Pytest HTML Report'
-                    ])
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            // Clean up or send notifications
-            echo 'Pipeline completed'
-        }
-        failure {
-            // Notify on failure
-            echo 'Pipeline failed'
-        }
-        success {
-            // Notify on success
-            echo 'Pipeline succeeded'
         }
     }
 }
