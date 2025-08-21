@@ -1,6 +1,11 @@
 pipeline {
     agent any
     
+    tools {
+        // Use the correct identifier for Python
+        'jenkins.plugins.shiningpanda.tools.PythonInstallation' 'python3'
+    }
+    
     environment {
         PYTHONPATH = "${WORKSPACE}"
     }
@@ -16,20 +21,10 @@ pipeline {
             }
         }
         
-        stage('Setup Python') {
-            steps {
-                sh '''
-                    python3 --version
-                    pip3 --version
-                    # Install Python if not available (using system Python)
-                '''
-            }
-        }
-        
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'pip3 install -r requirements.txt'
+                    sh 'pip install -r requirements.txt'
                 }
             }
         }
@@ -37,12 +32,32 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'python3 -m pytest tests/ -v --junitxml=test-results/junit.xml'
+                    sh 'python -m pytest tests/ -v --junitxml=test-results/junit.xml'
                 }
             }
             post {
                 always {
                     junit 'messaging_app/test-results/junit.xml'
+                }
+            }
+        }
+        
+        stage('Generate Test Report') {
+            steps {
+                dir('messaging_app') {
+                    sh 'python -m pytest tests/ -v --html=test-results/report.html --self-contained-html || true'
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'messaging_app/test-results',
+                        reportFiles: 'report.html',
+                        reportName: 'Pytest HTML Report'
+                    ])
                 }
             }
         }
