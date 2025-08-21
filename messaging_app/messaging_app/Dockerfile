@@ -1,28 +1,17 @@
-# messaging_app/Dockerfile
-FROM python:3.11-slim
+FROM jenkins/jenkins:lts
 
-# Set working directory
-WORKDIR /app
+USER root
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Install Python, pip, and Docker
+RUN apt update && \
+    apt install -y python3 python3-pip python3-venv && \
+    apt install -y docker.io && \
+    apt install -y git && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Add jenkins user to docker group
+RUN usermod -aG docker jenkins
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy project
-COPY . .
-
-# Expose port
-EXPOSE 8000
-
-# Run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Switch back to jenkins user for security
+USER jenkins

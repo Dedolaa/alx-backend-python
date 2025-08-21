@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'dedolaa/alx-messaging-app'
+        DOCKER_IMAGE = 'dedola/messaging_app'
         DOCKER_TAG = "latest-${env.BUILD_ID}"
     }
     
