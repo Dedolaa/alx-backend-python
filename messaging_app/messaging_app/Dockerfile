@@ -1,17 +1,21 @@
-FROM jenkins/jenkins:lts
+FROM python:3.11-slim
 
-USER root
+WORKDIR /app
 
-# Install Python, pip, and Docker
-RUN apt update && \
-    apt install -y python3 python3-pip python3-venv && \
-    apt install -y docker.io && \
-    apt install -y git && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Add jenkins user to docker group
-RUN usermod -aG docker jenkins
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Switch back to jenkins user for security
-USER jenkins
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
