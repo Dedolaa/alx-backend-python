@@ -1,63 +1,82 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+    
+    tools {
+        python "python3"
     }
-
+    
     environment {
-        DOCKER_IMAGE = "dedola/messaging_app:latest"
+        // Set Python path if needed
+        PYTHONPATH = "${WORKSPACE}"
     }
-
+    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Dedolaa/alx-backend-python.git'
+                // Clone the repository with credentials
+                git(
+                    url: 'https://github.com/Dedolaa/alx-backend-python.git',
+                    credentialsId: 'github-credentials',
+                    branch: 'main'
+                )
             }
         }
-
+        
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    cd messaging_app
-                    python -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh '''
-                    cd messaging_app
-                    . venv/bin/activate
-                    pytest --junitxml=report.xml || true
-                '''
-                junit 'messaging_app/report.xml'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh '''
-                    cd messaging_app
-                    docker build -t $DOCKER_IMAGE .
-                '''
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $DOCKER_IMAGE
-                    '''
+                dir('messaging_app') {
+                    sh 'pip install -r requirements.txt'
                 }
             }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                dir('messaging_app') {
+                    sh 'python -m pytest tests/ -v --junitxml=test-results/junit.xml'
+                }
+            }
+            post {
+                always {
+                    junit 'messaging_app/test-results/junit.xml'
+                }
+            }
+        }
+        
+        stage('Generate Test Report') {
+            steps {
+                dir('messaging_app') {
+                    // Generate HTML report if you have pytest-html
+                    sh 'python -m pytest tests/ -v --html=test-results/report.html --self-contained-html'
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'messaging_app/test-results',
+                        reportFiles: 'report.html',
+                        reportName: 'Pytest HTML Report'
+                    ])
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up or send notifications
+            echo 'Pipeline completed'
+        }
+        failure {
+            // Notify on failure
+            echo 'Pipeline failed'
+        }
+        success {
+            // Notify on success
+            echo 'Pipeline succeeded'
         }
     }
 }
