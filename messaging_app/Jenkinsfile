@@ -1,11 +1,6 @@
 pipeline {
     agent any
     
-    tools {
-        // Use the correct identifier for Python
-        'jenkins.plugins.shiningpanda.tools.PythonInstallation' 'python3'
-    }
-    
     environment {
         PYTHONPATH = "${WORKSPACE}"
     }
@@ -24,7 +19,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'pip install -r requirements.txt'
+                    sh 'python3 -m pip install -r requirements.txt'
                 }
             }
         }
@@ -32,7 +27,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'python -m pytest tests/ -v --junitxml=test-results/junit.xml'
+                    sh 'python3 -m pytest tests/ -v --junitxml=test-results/junit.xml'
                 }
             }
             post {
@@ -45,7 +40,7 @@ pipeline {
         stage('Generate Test Report') {
             steps {
                 dir('messaging_app') {
-                    sh 'python -m pytest tests/ -v --html=test-results/report.html --self-contained-html || true'
+                    sh 'python3 -m pytest tests/ -v --html=test-results/report.html --self-contained-html || true'
                 }
             }
             post {
@@ -60,6 +55,12 @@ pipeline {
                     ])
                 }
             }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed'
         }
     }
 }
