@@ -30,7 +30,7 @@ pipeline {
                 dir('messaging_app') {
                     sh '''
                         . venv/bin/activate
-                        pip install pytest pytest-html pytest-junit
+                        pip install pytest pytest-html
                     '''
                 }
             }
@@ -49,8 +49,8 @@ pipeline {
                 dir('messaging_app') {
                     sh '''
                         . venv/bin/activate
-                        # Run pytest with JUnit XML output
-                        python -m pytest tests/ -v --junitxml=test-results/junit.xml || echo "Test execution completed"
+                        # Run pytest with JUnit XML output (built into pytest)
+                        python -m pytest tests/ -v --junitxml=test-results/junit.xml || echo "Test execution completed with exit code $?"
                     '''
                 }
             }
@@ -89,12 +89,6 @@ pipeline {
     post {
         always {
             echo 'Pipeline execution completed'
-        }
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo 'Pipeline failed - check test results for details'
         }
     }
 }
