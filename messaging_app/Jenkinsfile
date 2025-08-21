@@ -1,0 +1,94 @@
+pipeline {
+    agent any
+    
+    environment {
+        PYTHONPATH = "${WORKSPACE}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git(
+                    url: 'https://github.com/Dedolaa/alx-backend-python.git',
+                    credentialsId: 'github-credentials',
+                    branch: 'main'
+                )
+            }
+        }
+        
+        stage('Setup Virtual Environment') {
+            steps {
+                dir('messaging_app') {
+                    sh 'python3 -m venv venv'
+                    sh '. venv/bin/activate && pip install --upgrade pip'
+                }
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+                        . venv/bin/activate
+                        pip install pytest pytest-html
+                    '''
+                }
+            }
+        }
+        
+        stage('Create Test Directory') {
+            steps {
+                dir('messaging_app') {
+                    sh 'mkdir -p test-results'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+                        . venv/bin/activate
+                        # Run pytest with JUnit XML output (built into pytest)
+                        python -m pytest tests/ -v --junitxml=test-results/junit.xml || echo "Test execution completed with exit code $?"
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit 'messaging_app/test-results/junit.xml'
+                }
+            }
+        }
+        
+        stage('Generate HTML Report') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+                        . venv/bin/activate
+                        # Generate HTML report
+                        python -m pytest tests/ -v --html=test-results/report.html --self-contained-html || echo "HTML report generation completed"
+                    '''
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'messaging_app/test-results',
+                        reportFiles: 'report.html',
+                        reportName: 'Pytest HTML Report'
+                    ])
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline execution completed'
+        }
+    }
+}
